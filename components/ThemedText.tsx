@@ -15,7 +15,11 @@ export function ThemedText({
   type = 'default',
   ...rest
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  // Força branco puro no tema escuro para máximo contraste salvo override explícito
+  const color = useThemeColor(
+    { light: lightColor, dark: darkColor ?? '#FFFFFF' },
+    'text'
+  );
 
   return (
     <Text
