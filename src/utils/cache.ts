@@ -1,40 +1,5 @@
-/**
- * COPILOT:
- * Implemente um utilitário TypeScript usando @react-native-async-storage/async-storage.
- *
- * Requisitos e especificações:
- * 1) Estrutura do payload salvo:
- *    interface CachePayload<T> { timestamp: number; version?: string; data: T }
- *    - Sempre incluir timestamp = Date.now()
- *    - version é opcional (útil para invalidar caches quando a estrutura mudar)
- *
- * 2) Funções a exportar:
- *    - saveToCache<T>(key: string, data: T): Promise<void>
- *    - loadFromCache<T>(key: string): Promise<CachePayload<T> | null>
- *    - clearCache(key: string): Promise<void>
- *    - isCacheValid(timestamp: number, ttlMs: number): boolean
- *    - (opcional) loadCacheOrFetch<T>(
- *         key: string,
- *         ttlMs: number,
- *         fetcher: () => Promise<T>
- *       ): Promise<T>
- *      Comportamento: se cache válido retorna cache.data, se expirado chama fetcher(), salva novo cache e retorna o resultado. Se fetcher falhar e existir cache (mesmo expirado), retornar cache.data como fallback.
- *
- * 3) Requisitos de implementação:
- *    - Usar JSON.stringify / JSON.parse com try/catch.
- *    - Em parse inválido, fazer clearCache(key) e retornar null.
- *    - Tratar erros do AsyncStorage com try/catch e log (não lançar erro para UI).
- *    - Prefixar keys com um namespace, ex: `cache:${key}`.
- *    - TTL padrão (se necessário) sugerido: 3600000 ms (1 hora) — mas deixar função aceitar ttl como parâmetro.
- *    - Documentar em comentários os casos de fallback (offline).
- *
- * 4) Tipos TypeScript:
- *    - export interface CachePayload<T> { timestamp: number; version?: string; data: T }
- *    - export type Maybe<T> = T | null;
- *
- * 5) Exportar as funções com nomes exatos (para fácil import).
- * 6) Incluir uma pequena função utilitária getCacheAge(timestamp) que retorna idade em ms.
- */
+// Utilitário de cache (AsyncStorage) com versionamento e fallback offline.
+// Estrutura: { timestamp, version, data }. Version permite invalidar entradas antigas.
 // Utilitário de cache com versionamento e fallback offline.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -131,23 +96,11 @@ export async function loadCacheOrFetch<T>(
   }
 }
 
-// Blocos de prompt funcionais individuais (podem ser usados separadamente para guiar Copilot)
-/**
- * COPILOT:
- * Implemente a função saveToCache<T>(key: string, data: T): Promise<void>
- * - Deve usar AsyncStorage.setItem
- * - Deve criar CachePayload com timestamp e version (const CACHE_VERSION = 'v1')
- * - Catch de erro deve usar console.warn('saveToCache error', e)
- */
-/**
- * COPILOT:
- * Implemente loadFromCache<T>(key: string): Promise<CachePayload<T> | null>
- * - Deve usar AsyncStorage.getItem e JSON.parse
- * - Se parse falhar, limpar a chave e retornar null
- * - Se payload.version !== CACHE_VERSION, limpar e retornar null
- */
-/**
- * COPILOT:
- * Implemente loadCacheOrFetch<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T>
- * - Verificar cache; se válido retornar; se expirado buscar, salvar e retornar; fallback para cache expirado se fetch falhar
- */
+// Funções exportadas: saveToCache, loadFromCache, clearCache, isCacheValid, getCacheAge, loadCacheOrFetch.
+// Ao mudar estrutura de dados, basta alterar CACHE_VERSION para invalidar.
+
+// Exemplo de uso (comentado):
+// const resultado = await loadCacheOrFetch<AlgumTipo>("minha-chave", 3600_000, async () => {
+//   const r = await api.get<AlgumTipo>('/rota');
+//   return r.data;
+// });
