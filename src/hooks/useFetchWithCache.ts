@@ -1,19 +1,15 @@
-/**
- * COPILOT:
- * Gere um hook TypeScript `useFetchWithCache<T>` com a assinatura descrita abaixo.
- * Comportamento:
- * - Usa `api` (src/services/api) para buscar o endpoint.
- * - Usa funções de cache (src/utils/cache) para salvar/carregar.
- * - TTL padrão: 1 hora (3600000 ms).
- * - Se fetch falhar, tenta retornar cache existente.
- * - Expor função `refresh` para forçar fetch da API e atualizar cache.
- * - Tratar estados: loading, error.
- */
+// Hook para buscar dados com cache (AsyncStorage + TTL) e fallback offline.
+// Estratégia:
+// - Lê cache; se válido retorna imediatamente e atualiza silenciosamente em background.
+// - Se expirado ou inexistente, busca API e salva.
+// - Se falha e há cache (stale), usa cache para não quebrar a UI.
+// - refresh(): força nova busca ignorando estado anterior.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../services/api';
-import { clearCache, isCacheValid, loadFromCache, saveToCache } from '../utils/cache';
-import { CACHE_TTL_MS } from '../config';
+import { isCacheValid, loadFromCache, saveToCache } from '../utils/cache';
+// TTL padrão: 1 hora (3600000 ms)
+const CACHE_TTL_MS = 3600000;
 
 interface UseFetchParams {
   endpoint: string;
@@ -31,6 +27,7 @@ export function useFetchWithCache<T>({
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const hasFetchedRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -39,12 +36,15 @@ export function useFetchWithCache<T>({
     setError(null);
 
     const cached = await loadFromCache<T>(cacheKey);
-    if (cached && isCacheValid(cached.timestamp, ttlMs)) {
-      setData(cached.data);
-      setLoading(false);
-      // continue in background to refresh silently
-      fetchAndCache(false);
-      return;
+    if (cached) {
+      if (isCacheValid(cached.timestamp, ttlMs)) {
+        setData(cached.data);
+        setLastUpdated(cached.timestamp);
+        setLoading(false);
+        fetchAndCache(false); // refresh silencioso
+        return;
+      }
+      // Cache expirado: tenta buscar; poderia exibir stale (opcional)
     }
     await fetchAndCache(true, cached);
   }, [cacheKey, endpoint, ttlMs, skip]);
@@ -52,14 +52,21 @@ export function useFetchWithCache<T>({
   const fetchAndCache = useCallback(
     async (updateState: boolean, stale?: { timestamp: number; data: T } | null) => {
       try {
+        console.log('[useFetchWithCache] GET', endpoint);
         const response = await api.get<T>(endpoint);
         const fresh = response.data;
         await saveToCache(cacheKey, fresh);
-        if (updateState) setData(fresh);
+        if (updateState) {
+          setData(fresh);
+          setLastUpdated(Date.now());
+        }
       } catch (e: any) {
         if (stale) {
           // fallback to stale
-          if (updateState) setData(stale.data);
+          if (updateState) {
+            setData(stale.data);
+            setLastUpdated(stale.timestamp);
+          }
         } else if (updateState) {
           setError(e instanceof Error ? e : new Error('Erro ao carregar dados'));
         }
@@ -83,7 +90,7 @@ export function useFetchWithCache<T>({
     }
   }, [load]);
 
-  return { data, loading, error, refresh } as const;
+  return { data, loading, error, refresh, lastUpdated } as const;
 }
 
 export default useFetchWithCache;

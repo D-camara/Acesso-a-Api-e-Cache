@@ -1,15 +1,6 @@
-/**
- * COPILOT:
- * Gere um módulo TypeScript que usa @react-native-async-storage/async-storage.
- * Exportar funções genéricas:
- * - saveToCache<T>(key: string, data: T): Promise<void>
- * - loadFromCache<T>(key: string): Promise<{ timestamp: number; data: T } | null>
- * - clearCache(key: string): Promise<void>
- * - isCacheValid(timestamp: number, ttlMs: number): boolean
- * Requisitos:
- * - Usar JSON.stringify/parse com try/catch
- * - Tratar erros silenciosamente (log) e retornar null quando inválido
- */
+// Utilitário simples de cache usando AsyncStorage.
+// Cada item: { timestamp, data }.
+// Erros são apenas logados para não quebrar a UI.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -22,7 +13,7 @@ export async function saveToCache<T>(key: string, data: T): Promise<void> {
   try {
     await AsyncStorage.setItem(key, buildValue(data));
   } catch (e) {
-    console.warn('[cache] save error', key, e);
+  console.warn('[cache] erro ao salvar', key, e);
   }
 }
 
@@ -41,7 +32,7 @@ export async function loadFromCache<T>(key: string): Promise<CacheEnvelope<T> | 
     }
     return parsed;
   } catch (e) {
-    console.warn('[cache] load error', key, e);
+  console.warn('[cache] erro ao ler', key, e);
     return null;
   }
 }
@@ -50,7 +41,7 @@ export async function clearCache(key: string): Promise<void> {
   try {
     await AsyncStorage.removeItem(key);
   } catch (e) {
-    console.warn('[cache] clear error', key, e);
+  console.warn('[cache] erro ao limpar', key, e);
   }
 }
 

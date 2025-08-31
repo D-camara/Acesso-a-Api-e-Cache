@@ -1,14 +1,4 @@
-/**
- * COPILOT:
- * Gere um componente React Native TypeScript `HomeScreen`.
- * Requisitos:
- * - Importar e usar useFetchWithCache<Post[]>
- * - Usar FlatList para mostrar `title` e `body`
- * - Implementar pull-to-refresh (calling refresh)
- * - Mostrar ActivityIndicator enquanto loading
- * - Se erro e sem cache, mostrar mensagem e botão "Tentar novamente" que chama refresh
- * - Tipo Post conforme interface
- */
+// Tela Home: lista posts com cache e suporte offline.
 import React, { useMemo } from 'react';
 import { ActivityIndicator, Button, FlatList, RefreshControl, SafeAreaView, Text, View } from 'react-native';
 import useFetchWithCache from '../hooks/useFetchWithCache';
@@ -17,7 +7,7 @@ import { Post } from '../types/api';
 const CACHE_KEY = 'posts:list';
 
 export const HomeScreen: React.FC = () => {
-  const { data, loading, error, refresh } = useFetchWithCache<Post[]>({
+  const { data, loading, error, refresh, lastUpdated } = useFetchWithCache<Post[]>({
     endpoint: '/posts',
     cacheKey: CACHE_KEY,
   });
@@ -46,6 +36,11 @@ export const HomeScreen: React.FC = () => {
       {error && data && (
         <View style={{ padding: 8, backgroundColor: '#ffefc1' }}>
           <Text style={{ color: '#8a6d3b' }}>Mostrando dados em cache (offline)</Text>
+        </View>
+      )}
+      {lastUpdated && (
+        <View style={{ padding: 8, backgroundColor: '#f2f2f2' }}>
+          <Text style={{ fontSize: 12 }}>Última atualização: {new Date(lastUpdated).toLocaleTimeString()}</Text>
         </View>
       )}
       <FlatList
