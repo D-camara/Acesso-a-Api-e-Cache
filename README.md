@@ -2,49 +2,62 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Setup
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Rodando localmente
 
-## Learn more
+```bash
+npm start
+```
+Abra no dispositivo usando o app Expo Go ou emulador.
 
-To learn more about developing your project with Expo, look at the following resources:
+## API & Configuração
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+A API padrão usada é `https://jsonplaceholder.typicode.com` (placeholder). Pode ser substituída definindo variável de ambiente `API_BASE_URL` ou editando `src/config.ts` (não colocar segredos no repositório).
 
-## Join the community
+## Política de Cache
 
-Join our community of developers creating universal apps.
+- Utilitário em `src/utils/cache.ts` baseado em AsyncStorage.
+- Cada entrada salva `{ timestamp, data }`.
+- TTL padrão definido em `CACHE_TTL_MS = 3600000` (1h) em `src/config.ts`.
+- Hook `useFetchWithCache` (arquivo `src/hooks/useFetchWithCache.ts`) segue fluxo:
+  1. Lê cache pela `cacheKey`.
+  2. Se válido (timestamp < TTL) retorna imediatamente e atualiza em background.
+  3. Se expirado, tenta buscar da API; sucesso -> atualiza cache; falha -> fallback para cache (stale) se existir.
+  4. `refresh()` força nova chamada e atualiza cache.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Tela Home
+
+`src/screens/HomeScreen.tsx` lista posts (`/posts`) com pull-to-refresh, indicador de offline (quando usando dados em cache após erro) e botão de retry se não houver dados.
+
+## Testes Manuais Offline
+
+```text
+1. Rodar app: npm start
+2. Com rede ativa: abrir Home -> deve listar posts e gravar cache.
+3. Desligar rede (modo avião) e reiniciar app -> deve mostrar dados em cache e aviso.
+4. Testar pull-to-refresh: puxar lista; com rede volta a buscar e atualizar cache.
+5. (Opcional) Reduzir TTL para poucos segundos em config e repetir para ver expiração.
+```
+
+## Como enviar / zipar para Teams
+
+1. Executar `git log --oneline` e copiar commits de feature.
+2. Garantir que não há segredos (somente URL pública placeholder).
+3. Compactar pasta (excluindo `node_modules/` se necessário) e enviar.
+
+## Commits de Referência
+
+Exemplos sugeridos:
+- `feat(api): add axios instance (src/services/api.ts)`
+- `feat(cache): add async storage utils (src/utils/cache.ts)`
+- `feat(hook): add useFetchWithCache hook`
+- `feat(ui): add HomeScreen using hook`
+
+## Referências Expo
+
+Para documentação adicional consulte https://docs.expo.dev/
