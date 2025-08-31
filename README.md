@@ -1,67 +1,151 @@
-# Acesso-a-Api-e-Cache
+<div align="center">
 
-> Projeto demonstrando acesso a API com cache (AsyncStorage + TTL) em Expo/React Native.
+# Acesso à API com Cache (Expo / React Native)
 
-# Welcome to your Expo app 👋
+Aplicativo exemplo mostrando consumo de API + cache persistente em AsyncStorage com TTL, fallback offline e tema claro/escuro.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+</div>
 
-## Setup
+
+## 🚀 Visão Geral
+
+Objetivo: reduzir latência e garantir experiência offline básica ao listar posts de uma API pública (`/posts`).
+
+Principais pontos implementados:
+1. Serviço HTTP centralizado (Axios) (`src/services/api.ts`).
+2. Utilitário de cache genérico com versionamento e TTL (`src/utils/cache.ts`).
+3. Hook reutilizável `useFetchWithCache` para orquestrar cache + rede.
+4. Fallback para dados em cache quando a requisição falha (ex.: modo avião).
+5. Pull‑to‑refresh para forçar atualização manual.
+6. Gradiente de fundo + ajuste automático claro/escuro.
+7. Indicação visual quando exibindo dados offline (stale).
+
+---
+
+## 📁 Estrutura (trecho relevante)
+
+```
+src/
+  config.ts               # Constantes globais (API_BASE_URL, TTL)
+  services/api.ts         # Instância Axios
+  utils/cache.ts          # Cache (AsyncStorage + version + TTL + loadCacheOrFetch)
+  hooks/useFetchWithCache.ts
+  screens/HomeScreen.tsx  # Lista de posts
+  types/api.ts            # Tipagem Post
+```
+
+---
+
+## ⚙️ Instalação & Execução
 
 ```bash
 npm install
-```
-
-## Rodando localmente
-
-```bash
 npm start
 ```
-Abra no dispositivo usando o app Expo Go ou emulador.
 
-## API & Configuração
+Abrir no dispositivo com Expo Go (QR code) ou emulador (pressionar `a` ou `w` no terminal para Android / Web).
 
-A API padrão usada é `https://jsonplaceholder.typicode.com` (placeholder). Pode ser substituída definindo variável de ambiente `API_BASE_URL` ou editando `src/config.ts` (não colocar segredos no repositório).
-
-## Política de Cache
-
-- Utilitário em `src/utils/cache.ts` baseado em AsyncStorage.
-- Cada entrada salva `{ timestamp, data }`.
-- TTL padrão definido em `CACHE_TTL_MS = 3600000` (1h) em `src/config.ts`.
-- Hook `useFetchWithCache` (arquivo `src/hooks/useFetchWithCache.ts`) segue fluxo:
-  1. Lê cache pela `cacheKey`.
-  2. Se válido (timestamp < TTL) retorna imediatamente e atualiza em background.
-  3. Se expirado, tenta buscar da API; sucesso -> atualiza cache; falha -> fallback para cache (stale) se existir.
-  4. `refresh()` força nova chamada e atualiza cache.
-
-## Tela Home
-
-`src/screens/HomeScreen.tsx` lista posts (`/posts`) com pull-to-refresh, indicador de offline (quando usando dados em cache após erro) e botão de retry se não houver dados.
-
-## Testes Manuais Offline
-
-```text
-1. Rodar app: npm start
-2. Com rede ativa: abrir Home -> deve listar posts e gravar cache.
-3. Desligar rede (modo avião) e reiniciar app -> deve mostrar dados em cache e aviso.
-4. Testar pull-to-refresh: puxar lista; com rede volta a buscar e atualizar cache.
-5. (Opcional) Reduzir TTL para poucos segundos em config e repetir para ver expiração.
+Opcional (limpar cache Metro):
+```bash
+npx expo start --clear
 ```
 
-## Como enviar / zipar para Teams
+---
 
-1. Executar `git log --oneline` e copiar commits de feature.
-2. Garantir que não há segredos (somente URL pública placeholder).
-3. Compactar pasta (excluindo `node_modules/` se necessário) e enviar.
+## 🌐 Configuração da API
 
-## Commits de Referência
+Valor padrão: `https://jsonplaceholder.typicode.com`.
 
-Exemplos sugeridos:
-- `feat(api): add axios instance (src/services/api.ts)`
-- `feat(cache): add async storage utils (src/utils/cache.ts)`
-- `feat(hook): add useFetchWithCache hook`
-- `feat(ui): add HomeScreen using hook`
+Sobrescrever via variável de ambiente `API_BASE_URL` (em build) ou editando `src/config.ts`.
 
-## Referências Expo
+Nunca commitar segredos (usar placeholder ou .env privado se for o caso).
 
-Para documentação adicional consulte https://docs.expo.dev/
+---
+
+## 🗃️ Cache – Detalhes Técnicos
+
+Arquivo: `src/utils/cache.ts`.
+
+Formato salvo por chave: `{ timestamp, version, data }` com prefixo `cache:`.
+
+Constantes:
+- `CACHE_VERSION = 'v1'` (alterar para invalidar tudo ao mudar estrutura de dados).
+- TTL padrão usado no hook: `3600000` ms (1h) – configurável ao chamar.
+
+Funções principais:
+- `saveToCache(key, data)` – serializa em JSON e armazena.
+- `loadFromCache(key)` – retorna payload ou `null` se inválido / versão divergente.
+- `isCacheValid(timestamp, ttl)` – compara idade.
+- `getCacheAge(timestamp)` – utilitário (ms).
+- `clearCache(key)` – remove.
+- `loadCacheOrFetch(key, ttl, fetcher)` – alto nível (usa stale como fallback se `fetcher` falhar).
+
+Fallback offline: se a rede falhar e existir payload (mesmo expirado), devolve o dado stale para não quebrar a UI.
+
+---
+
+## 🔄 Hook `useFetchWithCache`
+
+Fluxo resumido:
+1. Lê cache.
+2. Se válido → exibe imediatamente e atualiza em background.
+3. Se expirado → tenta rede; se sucesso, salva + exibe; se erro, tenta stale.
+4. `refresh()` força revalidação manual.
+
+Retorna: `{ data, loading, error, refresh, lastUpdated }`.
+
+---
+
+## 🖥️ Tela `HomeScreen`
+
+Mostra lista de posts (`/posts`), banners de status (offline / hora da última atualização) e suporta pull‑to‑refresh.
+
+---
+
+## 🧪 Testes Manuais (Checklist)
+
+1. Online inicial → lista deve carregar e gravar cache.
+2. Ativar modo avião + reabrir → ver dados + aviso de offline.
+3. Puxar para atualizar (ainda offline) → permanece stale.
+4. Voltar rede e dar refresh → dados atualizados e marca horário novo.
+5. Reduzir TTL em `config.ts` (ex.: 5000 ms), esperar expirar → próxima abertura refaz fetch.
+6. Corromper valor no AsyncStorage (dev tools) → app limpa e refaz fetch.
+
+---
+
+## 📌 Commits (exemplos de organização adotada)
+
+```
+feat(api): instancia axios
+feat(cache): util async storage + version
+feat(hook): useFetchWithCache
+feat(ui): HomeScreen
+refactor(i18n): tradução e contraste
+feat(ui): gradiente e tema
+```
+
+---
+
+## 🚧 Possíveis Evoluções
+
+- Invalidação seletiva por prefixo.
+- Persistir estatísticas de hit/miss.
+- Paginação com chave composta (ex.: `posts:page:1`).
+- Estratégia stale‑while‑revalidate centralizada no util (já encaminhado no hook).
+- Testes unitários (Jest) para `cache.ts`.
+
+---
+
+## 📄 Licença
+
+Uso acadêmico/demonstrativo. Ajustar conforme necessidade antes de distribuição.
+
+---
+
+## 📬 Contato
+
+Qualquer dúvida sobre a implementação ou arquitetura: abra uma issue ou adapte livremente.
+
+---
+
+> Projeto desenvolvido para demonstrar boas práticas de cache e resiliência de dados em aplicações móveis.
